@@ -8,13 +8,11 @@ import xml.sax as sax
 import os
 import io
 import shutil
-import copy
-from collections import OrderedDict
 
 from firewall import config
 from firewall.functions import checkIP, checkIP6
 from firewall.functions import uniqify, max_policy_name_len, portStr
-from firewall.core.base import DEFAULT_POLICY_TARGET, POLICY_TARGETS
+from firewall.core.base import DEFAULT_POLICY_TARGET, POLICY_TARGETS, DEFAULT_POLICY_PRIORITY
 from firewall.core.io.io_object import IO_Object, \
     IO_Object_ContentHandler, IO_Object_XMLGenerator, check_port, \
     check_tcpudp, check_protocol
@@ -26,7 +24,26 @@ from firewall.errors import FirewallError
 class Policy(IO_Object):
     priority_min = -32768
     priority_max =  32767
-    priority_default = -1
+    priority_default = DEFAULT_POLICY_PRIORITY
+    priority_reserved = [0]
+
+    IMPORT_EXPORT_STRUCTURE = (
+        ( "version",  "" ),                            # s
+        ( "short", "" ),                               # s
+        ( "description", "" ),                         # s
+        ( "target", "" ),                              # s
+        ( "services", [ "", ], ),                      # as
+        ( "ports", [ ( "", "" ), ], ),                 # a(ss)
+        ( "icmp_blocks", [ "", ], ),                   # as
+        ( "masquerade", False ),                       # b
+        ( "forward_ports", [ ( "", "", "", "" ), ], ), # a(ssss)
+        ( "rich_rules", [ "" ] ),                      # as
+        ( "protocols", [ "", ], ),                     # as
+        ( "source_ports", [ ( "", "" ), ], ),          # a(ss)
+        ( "priority", 0 ),                             # i
+        ( "ingress_zones", [ "" ] ),                   # as
+        ( "egress_zones", [ "" ] ),                    # as
+        )
     ADDITIONAL_ALNUM_CHARS = [ "_", "-", "/" ]
     PARSER_REQUIRED_ELEMENT_ATTRS = {
         "short": None,
@@ -36,8 +53,10 @@ class Policy(IO_Object):
         "port": [ "port", "protocol" ],
         "icmp-block": [ "name" ],
         "icmp-type": [ "name" ],
+        "masquerade": None,
         "forward-port": [ "port", "protocol" ],
         "rule": None,
+        "source": None,
         "destination": [ "address" ],
         "protocol": [ "value" ],
         "source-port": [ "port", "protocol" ],
@@ -48,13 +67,14 @@ class Policy(IO_Object):
         "drop": None,
         "mark": [ "set" ],
         "limit": [ "value" ],
-        "ingress-zone": None,
-        "egress-zone": None,
+        "ingress-zone": [ "name" ],
+        "egress-zone": [ "name" ],
         }
     PARSER_OPTIONAL_ELEMENT_ATTRS = {
         "policy": [ "version", "priority" ],
         "forward-port": [ "to-port", "to-addr" ],
         "rule": [ "family", "priority" ],
+        "source": [ "address", "mac", "invert", "family", "ipset" ],
         "destination": [ "invert" ],
         "log": [ "prefix", "level" ],
         "reject": [ "type" ],
@@ -75,7 +95,6 @@ class Policy(IO_Object):
         self.source_ports = [ ]
         self.fw_config = None # to be able to check services and a icmp_blocks
         self.rules = [ ]
-        self.combined = False
         self.applied = False
         self.priority = self.priority_default
         self.derived_from_zone = None
@@ -96,21 +115,20 @@ class Policy(IO_Object):
         del self.source_ports[:]
         self.fw_config = None # to be able to check services and a icmp_blocks
         del self.rules[:]
-        self.combined = False
         self.applied = False
         self.priority = self.priority_default
         del self.ingress_zones[:]
         del self.egress_zones[:]
 
     def __getattr__(self, name):
-        if name == "rules_str":
+        if name == "rich_rules":
             rules_str = [str(rule) for rule in self.rules]
             return rules_str
         else:
             return getattr(super(Policy, self), name)
 
     def __setattr__(self, name, value):
-        if name == "rules_str":
+        if name == "rich_rules":
             self.rules = [rich.Rich_Rule(rule_str=s) for s in value]
         else:
             super(Policy, self).__setattr__(name, value)
@@ -159,15 +177,46 @@ class Policy(IO_Object):
         elif item == "target":
             if config not in POLICY_TARGETS:
                 raise FirewallError(errors.INVALID_TARGET, config)
-        elif item == "rules_str":
+        elif item == "rich_rules":
             for rule in config:
                 rich.Rich_Rule(rule_str=rule)
-        elif item in ["ingress-zone", "egress-zone"] and self.fw_config:
-            existing_zones = self.fw_config.get_zones()
+        elif item == "priority":
+            if config in self.priority_reserved or \
+               config > self.priority_max or \
+               config < self.priority_min:
+                raise FirewallError(errors.INVALID_PRIORITY, "%d is invalid priority. Must be in range [%d, %d]. The following are reserved: %s" %
+                                                             (config, self.priority_min, self.priority_max, self.priority_reserved))
+        elif item in ["ingress_zones", "egress_zones"]:
+            existing_zones = ["ANY", "HOST"]
+            if self.fw_config:
+                existing_zones += self.fw_config.get_zones()
             for zone in config:
                 if zone not in existing_zones:
-                    raise FirewallError(errors.INVALID_SERVICE,
-                                        "'%s' not among existing zones" % zone)
+                    raise FirewallError(errors.INVALID_ZONE,
+                                        "'%s' not among existing zones" % (zone))
+                if item == "ingress_zones":
+                    _add_to_zone_list = self.ingress_zones
+                else:
+                    _add_to_zone_list = self.egress_zones
+                if ((zone not in ["ANY", "HOST"] and (set(["ANY", "HOST"]) & set(_add_to_zone_list))) or \
+                   (zone in ["ANY", "HOST"] and (set(_add_to_zone_list) - set([zone])))):
+                    raise FirewallError(errors.INVALID_ZONE,
+                                        "'%s' may only contain one of: many regular zones, ANY, or HOST" % (item))
+                if zone == "HOST" and \
+                   ((item == "ingress_zones" and "HOST" in self.egress_zones) or \
+                   (item == "egress_zones" and "HOST" in self.ingress_zones)):
+                    raise FirewallError(errors.INVALID_ZONE,
+                                        "'HOST' can only appear in either ingress or egress zones, but not both")
+        elif item == "masquerade" and config:
+            if "HOST" in self.egress_zones:
+                raise FirewallError(errors.INVALID_ZONE, "'masquerade' is invalid for egress zone 'HOST'")
+        elif item == "rich_rules":
+            for rule in config:
+                obj = rich.Rich_Rule(rule_str=rule)
+                if obj.element and isinstance(obj.element, rich.Rich_Masquerade):
+                    if "HOST" in self.egress_zones:
+                        raise FirewallError(errors.INVALID_ZONE, "'masquerade' is invalid for egress zone 'HOST'")
+
 
     def check_name(self, name):
         super(Policy, self).check_name(name)
@@ -187,41 +236,9 @@ class Policy(IO_Object):
                 checked_name = name
             if len(checked_name) > max_policy_name_len():
                 raise FirewallError(errors.INVALID_NAME,
-                                    "Policy of '%s' has %d chars, max is %d %s" % (
+                                    "Policy of '%s' has %d chars, max is %d" % (
                                     name, len(checked_name),
-                                    max_policy_name_len(),
-                                    self.combined))
-
-    def import_config(self, conf):
-        self.check_config(conf)
-
-        # FIXME: 
-        for key in conf:
-            if not hasattr(self, key):
-                raise FirewallError(errors.UNKNOWN_ERROR, "Internal error. '{}' is not a valid attribute".format(key))
-            if isinstance(conf[key], list):
-                # maintain list order while removing duplicates
-                setattr(self, key, list(OrderedDict.fromkeys(copy.deepcopy(conf[key]))))
-            else:
-                setattr(self, key, copy.deepcopy(conf[key]))
-
-    def export_config(self):
-        conf = {}
-        # FIXME
-        type_formats = dict([(x[0], x[1]) for x in self.IMPORT_EXPORT_STRUCTURE])
-        for key in type_formats:
-            if getattr(self, key):
-                conf[key] = copy.deepcopy(getattr(self, key))
-        return conf
-
-    def check_config(self, conf):
-        # FIXME
-        type_formats = dict([(x[0], x[1]) for x in self.IMPORT_EXPORT_STRUCTURE])
-        for key in conf:
-            if key not in [x for (x,y) in self.IMPORT_EXPORT_STRUCTURE]:
-                raise FirewallError(errors.INVALID_OPTION, "policy option '{}' is not valid".format(key))
-            self._check_config_structure(conf[key], type_formats[key])
-            self._check_config(conf[key], key)
+                                    max_policy_name_len()))
 
 # PARSER
 
@@ -410,6 +427,32 @@ class policy_ContentHandler(IO_Object_ContentHandler):
                 log.warning("Source port '%s/%s' already set, ignoring.",
                             attrs["port"], attrs["protocol"])
 
+        elif name == "source":
+            if not self._rule:
+                log.warning('Invalid rule: Source outside of rule')
+                self._rule_error = True
+                return
+
+            if self._rule.source:
+                log.warning("Invalid rule: More than one source in rule '%s', ignoring.",
+                            str(self._rule))
+                self._rule_error = True
+                return
+            invert = False
+            if "invert" in attrs and \
+                    attrs["invert"].lower() in [ "yes", "true" ]:
+                invert = True
+            addr = mac = ipset = None
+            if "address" in attrs:
+                addr = attrs["address"]
+            if "mac" in attrs:
+                mac = attrs["mac"]
+            if "ipset" in attrs:
+                ipset = attrs["ipset"]
+            self._rule.source = rich.Rich_Source(addr, mac, ipset,
+                                                 invert=invert)
+            return
+
         elif name == "destination":
             if not self._rule:
                 log.warning('Invalid rule: Destination outside of rule')
@@ -554,7 +597,7 @@ def policy_reader(filename, path, no_check_name=False):
         try:
             parser.parse(source)
         except sax.SAXParseException as msg:
-            raise FirewallError(errors.INVALID_ZONE,
+            raise FirewallError(errors.INVALID_POLICY,
                                 "not a valid policy file: %s" % \
                                 msg.getException())
     del handler
@@ -624,7 +667,7 @@ def policy_writer(policy, path=None):
         handler.ignorableWhitespace("\n")
 
     # egress-zones
-    for zone in uniqify(policy.ingress_zones):
+    for zone in uniqify(policy.egress_zones):
         handler.ignorableWhitespace("  ")
         handler.simpleElement("egress-zone", { "name": zone })
         handler.ignorableWhitespace("\n")
