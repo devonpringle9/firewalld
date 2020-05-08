@@ -608,11 +608,11 @@ class Firewall(object):
                 else:
                     log.fatal("Unknown reader type %s", reader_type)
             except FirewallError as msg:
-                log.error("Failed to load %s file '%s': %s", reader_type,
-                          name, msg)
+                raise FirewallError(msg.code, "Failed to load %s file '%s': %s" %
+                                    (reader_type, name, msg))
             except Exception:
-                log.error("Failed to load %s file '%s':", reader_type, name)
-                log.exception()
+                raise FirewallError(errors.INVALID_OBJECT, "Failed to load %s file '%s'" %
+                                    (reader_type, name))
 
         if combine and combined_zone.combined:
             if combined_zone.name in self.zone.get_zones():
