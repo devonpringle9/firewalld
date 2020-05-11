@@ -65,3 +65,828 @@ FWD_CHECK([--check-config], 0, [ignore], [ignore])
 FWD_RELOAD
 
 FWD_END_TEST
+
+dnl ###############
+dnl ## CLI tests ##
+dnl ###############
+
+FWD_START_TEST([policy - create])
+AT_KEYWORDS(policy)
+
+dnl create a few policies
+FWD_CHECK([--permanent --new-policy worldToHost], 0, [ignore])
+FWD_CHECK([--permanent --new-policy hostToWorld], 0, [ignore])
+FWD_CHECK([--permanent --new-policy zoneToZone], 0, [ignore])
+FWD_CHECK([--permanent --get-policies], 0, [dnl
+allow-host-ipv6 hostToWorld worldToHost zoneToZone
+])
+FWD_RELOAD
+FWD_CHECK([--get-policies], 0, [dnl
+allow-host-ipv6 hostToWorld worldToHost zoneToZone
+])
+
+FWD_END_TEST
+
+FWD_START_TEST([policy - name])
+AT_KEYWORDS(policy)
+
+dnl verify name length (18)
+FWD_CHECK([--permanent --new-policy 123456789012345678], 0, [ignore])
+FWD_CHECK([--permanent --new-policy 1234567890123456789], 116, [ignore], [ignore])
+
+FWD_END_TEST
+
+FWD_START_TEST([policy - priority])
+AT_KEYWORDS(policy)
+
+dnl priority < 0 goes into _pre (before zones)
+FWD_CHECK([--permanent --new-policy worldToHost], 0, [ignore])
+FWD_CHECK([--permanent --policy worldToHost --add-ingress-zone ANY], 0, [ignore])
+FWD_CHECK([--permanent --policy worldToHost --add-egress-zone HOST], 0, [ignore])
+FWD_CHECK([--permanent --policy worldToHost --set-priority -1], 0, [ignore])
+FWD_CHECK([--permanent --policy worldToHost --get-priority], 0, [dnl
+-1
+])
+FWD_RELOAD
+NFT_LIST_RULES([inet], [filter_IN_policy_pre], 0, [dnl
+    FIXME
+])
+NFT_LIST_RULES([inet], [filter_IN_policy_post], 0, [dnl
+    FIXME
+])
+IPTABLES_LIST_RULES([filter], [IN_policy_pre], 0, [dnl
+    FIXME
+])
+IPTABLES_LIST_RULES([filter], [IN_policy_post], 0, [dnl
+    FIXME
+])
+IP6TABLES_LIST_RULES([filter], [IN_policy_pre], 0, [dnl
+    FIXME
+])
+IP6TABLES_LIST_RULES([filter], [IN_policy_post], 0, [dnl
+    FIXME
+])
+
+dnl priority > 0 goes into _post (after zones)
+FWD_CHECK([--permanent --policy worldToHost --set-priority 1], 0, [ignore])
+FWD_RELOAD
+NFT_LIST_RULES([inet], [filter_IN_policy_pre], 0, [dnl
+    FIXME
+])
+NFT_LIST_RULES([inet], [filter_IN_policy_post], 0, [dnl
+    FIXME
+])
+IPTABLES_LIST_RULES([filter], [IN_policy_pre], 0, [dnl
+    FIXME
+])
+IPTABLES_LIST_RULES([filter], [IN_policy_post], 0, [dnl
+    FIXME
+])
+IP6TABLES_LIST_RULES([filter], [IN_policy_pre], 0, [dnl
+    FIXME
+])
+IP6TABLES_LIST_RULES([filter], [IN_policy_post], 0, [dnl
+    FIXME
+])
+
+dnl verify sorting by priority
+FWD_CHECK([--permanent --new-policy first], 0, [ignore])
+FWD_CHECK([--permanent --policy first --add-ingress-zone ANY], 0, [ignore])
+FWD_CHECK([--permanent --policy first --add-egress-zone HOST], 0, [ignore])
+FWD_CHECK([--permanent --new-policy second], 0, [ignore])
+FWD_CHECK([--permanent --policy second --add-ingress-zone ANY], 0, [ignore])
+FWD_CHECK([--permanent --policy second --add-egress-zone HOST], 0, [ignore])
+FWD_CHECK([--permanent --new-policy third], 0, [ignore])
+FWD_CHECK([--permanent --policy third --add-ingress-zone ANY], 0, [ignore])
+FWD_CHECK([--permanent --policy third --add-egress-zone HOST], 0, [ignore])
+FWD_CHECK([--permanent --new-policy fourth], 0, [ignore])
+FWD_CHECK([--permanent --policy fourth --add-ingress-zone ANY], 0, [ignore])
+FWD_CHECK([--permanent --policy fourth --add-egress-zone HOST], 0, [ignore])
+FWD_CHECK([--permanent --new-policy fifth], 0, [ignore])
+FWD_CHECK([--permanent --policy fifth --add-ingress-zone ANY], 0, [ignore])
+FWD_CHECK([--permanent --policy fifth --add-egress-zone HOST], 0, [ignore])
+dnl
+FWD_CHECK([--permanent --policy fourth --set-priority -100], 0, [ignore])
+FWD_CHECK([--permanent --policy second --set-priority -5000], 0, [ignore])
+FWD_CHECK([--permanent --policy first --set-priority -10000], 0, [ignore])
+FWD_CHECK([--permanent --policy third --set-priority -1000], 0, [ignore])
+FWD_CHECK([--permanent --policy fifth --set-priority -10], 0, [ignore])
+FWD_RELOAD
+NFT_LIST_RULES([inet], [filter_IN_policy_pre], 0, [dnl
+    FIXME
+])
+IPTABLES_LIST_RULES([filter], [IN_policy_pre], 0, [dnl
+    FIXME
+])
+IP6TABLES_LIST_RULES([filter], [IN_policy_pre], 0, [dnl
+    FIXME
+])
+
+dnl verify priority bounds
+FWD_CHECK([--permanent --policy worldToHost --set-priority 0], 139, [ignore], [ignore]) dnl reserved for zones
+FWD_CHECK([--permanent --policy worldToHost --set-priority -32769], 139, [ignore], [ignore])
+FWD_CHECK([--permanent --policy worldToHost --set-priority -32768], 0, [ignore])
+FWD_CHECK([--permanent --policy worldToHost --set-priority  32768], 139, [ignore], [ignore])
+FWD_CHECK([--permanent --policy worldToHost --set-priority  32767], 0, [ignore])
+
+FWD_END_TEST
+
+FWD_START_TEST([policy - zones])
+AT_KEYWORDS(policy)
+
+FWD_CHECK([--permanent --new-policy=foobar], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --set-priority -1], 0, [ignore])
+
+dnl only one of HOST/ANY/zones allowed in ingress
+FWD_CHECK([--permanent --policy=foobar --add-ingress-zone="HOST"], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --query-ingress-zone="HOST"], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --add-ingress-zone="ANY"], 112, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --add-ingress-zone="public"], 112, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --remove-ingress-zone="HOST"], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --add-ingress-zone="ANY"], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --query-ingress-zone="ANY"], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --add-ingress-zone="HOST"], 112, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --add-ingress-zone="public"], 112, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --remove-ingress-zone="ANY"], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --add-ingress-zone="public"], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --query-ingress-zone="public"], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --add-ingress-zone="internal"], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --query-ingress-zone="internal"], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --add-ingress-zone="ANY"], 112, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --add-ingress-zone="HOST"], 112, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --query-ingress-zone="ANY"], 1, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --query-ingress-zone="HOST"], 1, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --remove-ingress-zone="public"], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --remove-ingress-zone="internal"], 0, [ignore])
+
+dnl only one of HOST/ANY/zones allowed in egress
+FWD_CHECK([--permanent --policy=foobar --add-egress-zone="HOST"], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --add-egress-zone="ANY"], 112, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --add-egress-zone="public"], 112, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --remove-egress-zone="HOST"], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --add-egress-zone="ANY"], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --add-egress-zone="HOST"], 112, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --add-egress-zone="public"], 112, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --remove-egress-zone="ANY"], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --add-egress-zone="public"], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --add-egress-zone="internal"], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --add-egress-zone="ANY"], 112, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --add-egress-zone="HOST"], 112, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --remove-egress-zone="public"], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --remove-egress-zone="internal"], 0, [ignore])
+
+dnl verify ANY to ANY is possible
+FWD_CHECK([--permanent --policy=foobar --add-ingress-zone="ANY"], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --add-egress-zone="ANY"], 0, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --query-egress-zone="ANY"], 0, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --query-egress-zone="ANY"], 0, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --remove-ingress-zone="ANY"], 0, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --remove-egress-zone="ANY"], 0, [ignore], [ignore])
+
+dnl zone's are allowed in both ingress and egress
+FWD_CHECK([--permanent --policy=foobar --add-ingress-zone="public"], 0, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --add-egress-zone="public"], 0, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --query-egress-zone="public"], 0, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --query-egress-zone="public"], 0, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --remove-ingress-zone="public"], 0, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --remove-egress-zone="public"], 0, [ignore], [ignore])
+
+dnl negative test HOST to HOST not possible
+FWD_CHECK([--permanent --policy=foobar --add-ingress-zone="HOST"], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --add-egress-zone="HOST"], 112, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --remove-ingress-zone="HOST"], 0, [ignore])
+
+dnl negative test non existent zones
+FWD_CHECK([--permanent --policy=foobar --add-ingress-zone="does_not_exist"], 112, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --add-egress-zone="does_not_exist"], 112, [ignore], [ignore])
+
+dnl verify we allow policies with missing ingress and/or egress zones.  This
+dnl allows them to exist, but be un-applied. Useful for shipping "stock"
+dnl policies.
+FWD_CHECK([--permanent --policy=foobar --add-ingress-zone="public"], 0, [ignore])
+FWD_RELOAD
+FWD_CHECK([--get-active-policies], 0, [dnl
+    FIXME
+])
+NFT_LIST_RULES([inet], [filter_FWD_policy_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([filter], [FWD_policy_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([filter], [FWD_policy_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+FWD_CHECK([--permanent --policy=foobar --add-egress-zone="internal"], 0, [ignore])
+FWD_RELOAD
+FWD_CHECK([--get-active-policies], 0, [dnl
+    FIXME
+])
+NFT_LIST_RULES([inet], [filter_FWD_policy_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([filter], [FWD_policy_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([filter], [FWD_policy_pre], 0, [dnl
+    FIXME: verify rules added
+])
+FWD_CHECK([--permanent --policy=foobar --remove-ingress-zone="public"], 0, [ignore])
+FWD_RELOAD
+FWD_CHECK([--get-active-policies], 0, [dnl
+    FIXME
+])
+NFT_LIST_RULES([inet], [filter_FWD_policy_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([filter], [FWD_policy_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([filter], [FWD_policy_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+
+FWD_END_TEST
+
+FWD_START_TEST([policy - dispatch])
+AT_KEYWORDS(policy)
+
+FWD_CHECK([--permanent --new-policy=foobar], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --set-priority -1], 0, [ignore])
+FWD_RELOAD
+
+FWD_CHECK([--get-active-policies], 0, [dnl
+    FIXME
+])
+dnl Verify zone --> HOST is dispatched correctly (INPUT).
+dnl
+FWD_CHECK([--policy=foobar --add-ingress-zone="public"], 0, [ignore])
+FWD_CHECK([--policy=foobar --add-egress-zone="HOST"], 0, [ignore])
+FWD_CHECK([--get-active-policies], 0, [dnl
+    FIXME
+])
+dnl (filter, input)
+NFT_LIST_RULES([inet], [filter_INPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([filter], [INPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([filter], [INPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+dnl (filter, output)
+NFT_LIST_RULES([inet], [filter_OUTPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([filter], [OUTPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([filter], [OUTPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+dnl (filter, forward)
+NFT_LIST_RULES([inet], [filter_FORWARD_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([filter], [FORWARD_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([filter], [FORWARD_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+dnl (raw, prerouting) (helpers, iptables only)
+NFT_LIST_RULES([inet], [raw_PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([raw], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([raw], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+dnl (mangle, prerouting)
+NFT_LIST_RULES([inet], [mangle_PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([mangle], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([mangle], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+dnl (nat, prerouting)
+NFT_LIST_RULES([inet], [nat_PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([nat], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([nat], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+dnl (nat, postrouting)
+NFT_LIST_RULES([inet], [nat_POSTROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([nat], [POSTROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([nat], [POSTROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+FWD_CHECK([--policy=foobar --remove-ingress-zone="public"], 0, [ignore])
+FWD_CHECK([--policy=foobar --remove-egress-zone="HOST"], 0, [ignore])
+
+dnl Verify ANY --> HOST is dispatched correctly (INPUT).
+dnl
+FWD_CHECK([--policy=foobar --add-ingress-zone="ANY"], 0, [ignore])
+FWD_CHECK([--policy=foobar --add-egress-zone="HOST"], 0, [ignore])
+dnl (filter, input)
+NFT_LIST_RULES([inet], [filter_INPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([filter], [INPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([filter], [INPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+dnl (filter, output)
+NFT_LIST_RULES([inet], [filter_OUTPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([filter], [OUTPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([filter], [OUTPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+dnl (filter, forward)
+NFT_LIST_RULES([inet], [filter_FORWARD_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([filter], [FORWARD_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([filter], [FORWARD_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+dnl (raw, prerouting) (helpers, iptables only)
+NFT_LIST_RULES([inet], [raw_PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([raw], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([raw], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+dnl (mangle, prerouting)
+NFT_LIST_RULES([inet], [mangle_PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([mangle], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([mangle], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+dnl (nat, prerouting)
+NFT_LIST_RULES([inet], [nat_PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([nat], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([nat], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+dnl (nat, postrouting)
+NFT_LIST_RULES([inet], [nat_POSTROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([nat], [POSTROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([nat], [POSTROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+FWD_CHECK([--policy=foobar --remove-ingress-zone="ANY"], 0, [ignore])
+FWD_CHECK([--policy=foobar --remove-egress-zone="HOST"], 0, [ignore])
+
+dnl Verify HOST --> zone is dispatched correctly (OUTPUT).
+dnl
+FWD_CHECK([--policy=foobar --add-ingress-zone="HOST"], 0, [ignore])
+FWD_CHECK([--policy=foobar --add-egress-zone="public"], 0, [ignore])
+dnl (filter, input)
+NFT_LIST_RULES([inet], [filter_INPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([filter], [INPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([filter], [INPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+dnl (filter, output)
+NFT_LIST_RULES([inet], [filter_OUTPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([filter], [OUTPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([filter], [OUTPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+dnl (filter, forward)
+NFT_LIST_RULES([inet], [filter_FORWARD_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([filter], [FORWARD_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([filter], [FORWARD_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+dnl (raw, prerouting) (helpers, iptables only)
+NFT_LIST_RULES([inet], [raw_PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([raw], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([raw], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+dnl (mangle, prerouting)
+NFT_LIST_RULES([inet], [mangle_PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([mangle], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([mangle], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+dnl (nat, prerouting)
+NFT_LIST_RULES([inet], [nat_PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([nat], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([nat], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+dnl (nat, postrouting)
+NFT_LIST_RULES([inet], [nat_POSTROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([nat], [POSTROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([nat], [POSTROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+FWD_CHECK([--policy=foobar --remove-ingress-zone="HOST"], 0, [ignore])
+FWD_CHECK([--policy=foobar --remove-egress-zone="public"], 0, [ignore])
+
+dnl Verify HOST --> ANY is dispatched correctly (OUTPUT).
+dnl
+FWD_CHECK([--policy=foobar --add-ingress-zone="HOST"], 0, [ignore])
+FWD_CHECK([--policy=foobar --add-egress-zone="ANY"], 0, [ignore])
+dnl (filter, input)
+NFT_LIST_RULES([inet], [filter_INPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([filter], [INPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([filter], [INPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+dnl (filter, output)
+NFT_LIST_RULES([inet], [filter_OUTPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([filter], [OUTPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([filter], [OUTPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+dnl (filter, forward)
+NFT_LIST_RULES([inet], [filter_FORWARD_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([filter], [FORWARD_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([filter], [FORWARD_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+dnl (raw, prerouting) (helpers, iptables only)
+NFT_LIST_RULES([inet], [raw_PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([raw], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([raw], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+dnl (mangle, prerouting)
+NFT_LIST_RULES([inet], [mangle_PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([mangle], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([mangle], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+dnl (nat, prerouting)
+NFT_LIST_RULES([inet], [nat_PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([nat], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([nat], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+dnl (nat, postrouting)
+NFT_LIST_RULES([inet], [nat_POSTROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([nat], [POSTROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([nat], [POSTROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+FWD_CHECK([--policy=foobar --remove-ingress-zone="HOST"], 0, [ignore])
+FWD_CHECK([--policy=foobar --remove-egress-zone="ANY"], 0, [ignore])
+
+dnl Verify ANY --> ANY is dispatched correctly (FORWARD).
+dnl
+FWD_CHECK([--policy=foobar --add-ingress-zone="ANY"], 0, [ignore])
+FWD_CHECK([--policy=foobar --add-egress-zone="ANY"], 0, [ignore])
+dnl (filter, input)
+NFT_LIST_RULES([inet], [filter_INPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([filter], [INPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([filter], [INPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+dnl (filter, output)
+NFT_LIST_RULES([inet], [filter_OUTPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([filter], [OUTPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([filter], [OUTPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+dnl (filter, forward)
+NFT_LIST_RULES([inet], [filter_FORWARD_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([filter], [FORWARD_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([filter], [FORWARD_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+dnl (raw, prerouting) (helpers, iptables only)
+NFT_LIST_RULES([inet], [raw_PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([raw], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([raw], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+dnl (mangle, prerouting)
+NFT_LIST_RULES([inet], [mangle_PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([mangle], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([mangle], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+dnl (nat, prerouting)
+NFT_LIST_RULES([inet], [nat_PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([nat], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([nat], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+dnl (nat, postrouting)
+NFT_LIST_RULES([inet], [nat_POSTROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([nat], [POSTROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([nat], [POSTROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+FWD_CHECK([--policy=foobar --remove-ingress-zone="ANY"], 0, [ignore])
+FWD_CHECK([--policy=foobar --remove-egress-zone="ANY"], 0, [ignore])
+
+dnl FIXME:Verify ANY --> zone is dispatched correctly (FORWARD).
+FWD_CHECK([--policy=foobar --add-ingress-zone="ANY"], 0, [ignore])
+FWD_CHECK([--policy=foobar --add-egress-zone="public"], 0, [ignore])
+dnl (filter, input)
+NFT_LIST_RULES([inet], [filter_INPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([filter], [INPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([filter], [INPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+dnl (filter, output)
+NFT_LIST_RULES([inet], [filter_OUTPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([filter], [OUTPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([filter], [OUTPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+dnl (filter, forward)
+NFT_LIST_RULES([inet], [filter_FORWARD_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([filter], [FORWARD_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([filter], [FORWARD_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+dnl (raw, prerouting) (helpers, iptables only)
+NFT_LIST_RULES([inet], [raw_PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([raw], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([raw], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+dnl (mangle, prerouting)
+NFT_LIST_RULES([inet], [mangle_PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([mangle], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([mangle], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+dnl (nat, prerouting)
+NFT_LIST_RULES([inet], [nat_PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([nat], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([nat], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+dnl (nat, postrouting)
+NFT_LIST_RULES([inet], [nat_POSTROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([nat], [POSTROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([nat], [POSTROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+FWD_CHECK([--policy=foobar --remove-ingress-zone="ANY"], 0, [ignore])
+FWD_CHECK([--policy=foobar --remove-egress-zone="public"], 0, [ignore])
+
+dnl FIXME:Verify zone --> zone is dispatched correctly (FORWARD).
+FWD_CHECK([--policy=foobar --add-ingress-zone="internal"], 0, [ignore])
+FWD_CHECK([--policy=foobar --add-egress-zone="public"], 0, [ignore])
+dnl (filter, input)
+NFT_LIST_RULES([inet], [filter_INPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([filter], [INPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([filter], [INPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+dnl (filter, output)
+NFT_LIST_RULES([inet], [filter_OUTPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IPTABLES_LIST_RULES([filter], [OUTPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+IP6TABLES_LIST_RULES([filter], [OUTPUT_POLICIES_pre], 0, [dnl
+    FIXME: verify rules not added
+])
+dnl (filter, forward)
+NFT_LIST_RULES([inet], [filter_FORWARD_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([filter], [FORWARD_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([filter], [FORWARD_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+dnl (raw, prerouting) (helpers, iptables only)
+NFT_LIST_RULES([inet], [raw_PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([raw], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([raw], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+dnl (mangle, prerouting)
+NFT_LIST_RULES([inet], [mangle_PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([mangle], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([mangle], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+dnl (nat, prerouting)
+NFT_LIST_RULES([inet], [nat_PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([nat], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([nat], [PREROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+dnl (nat, postrouting)
+NFT_LIST_RULES([inet], [nat_POSTROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IPTABLES_LIST_RULES([nat], [POSTROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+IP6TABLES_LIST_RULES([nat], [POSTROUTING_POLICIES_pre], 0, [dnl
+    FIXME: verify rules added
+])
+FWD_CHECK([--policy=foobar --remove-ingress-zone="internal"], 0, [ignore])
+FWD_CHECK([--policy=foobar --remove-egress-zone="public"], 0, [ignore])
+
+FWD_END_TEST
+
+FWD_START_TEST([policy - target])
+AT_KEYWORDS(policy)
+
+FWD_CHECK([--permanent --new-policy=foobar], 0, [ignore])
+
+FWD_CHECK([--permanent --policy=foobar --set-target=CONTINUE], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --set-target=ACCEPT], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --set-target=DROP], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --set-target=REJECT], 0, [ignore])
+FWD_CHECK([--permanent --policy=foobar --set-target=DENY], 110, [ignore], [ignore])
+FWD_CHECK([--permanent --policy=foobar --set-target=default], 110, [ignore], [ignore])
+
+FWD_END_TEST
+
+FWD_START_TEST([policy - from file])
+AT_KEYWORDS(policy)
+
+FWD_CHECK([--permanent --policy allow-host-ipv6 --add-protocol ipv6-icmp], 0, [ignore])
+AT_CHECK([ls "./policies/allow-host-ipv6.xml"], 0, [ignore])
+FWD_CHECK([--permanent --new-policy-from-file "./policies/allow-host-ipv6.xml" --name my-allow-host-ipv6], 0, [ignore])
+AT_CHECK([ls "./policies/my-allow-host-ipv6.xml"], 0, [ignore])
+FWD_CHECK([--permanent --get-policies], 0, [dnl
+allow-host-ipv6 my-allow-host-ipv6
+])
+FWD_RELOAD
+FWD_CHECK([--get-policies], 0, [dnl
+allow-host-ipv6 my-allow-host-ipv6
+])
+
+FWD_END_TEST
