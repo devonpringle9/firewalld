@@ -73,6 +73,11 @@ class FirewallPolicy(object):
         self._policies[obj.name] = obj
         self.copy_permanent_to_runtime(obj.name)
 
+    def apply_policies(self, use_transaction=None, exclude_zone_policies=True):
+        for policy in self.get_policies_not_derived_from_zone():
+            log.debug1("Applying policy %s" % (policy))
+            self.apply_policy_settings(policy, use_transaction=use_transaction)
+
     def remove_policy(self, policy):
         obj = self._policies[policy]
         if obj.applied:
