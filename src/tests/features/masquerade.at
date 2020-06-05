@@ -77,5 +77,5 @@ dnl             - nftables supports it since 28f8bfd1ac94("netfilter: Support ii
 dnl                 - accepts the rule
 dnl                 - will silently fail to match before this patch
 
-FWD_END_TEST([-e '/ERROR: INVALID_ZONE/d'])
-
+FWD_END_TEST([-e '/ERROR: INVALID_ZONE/d'dnl
+              -e '/WARNING: Support for policies in iptables has not been implemented. Passing empty rules for ipXtables.build_policy_source_interface_rules ./d'])

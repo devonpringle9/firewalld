@@ -1339,6 +1339,10 @@ class ip4tables(object):
     def is_ipv_supported(self, ipv):
         return ipv == self.ipv
 
+    def build_policy_source_interface_rules(self, enable, policy, table, ingress_if=None, egress_if=None, append=True, family="inet"):
+        log.warning("Support for policies in iptables has not been implemented. Passing empty rules for ipXtables.build_policy_source_interface_rules .")
+        return []
+
 class ip6tables(ip4tables):
     ipv = "ipv6"
     name = "ip6tables"

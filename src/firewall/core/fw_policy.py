@@ -1736,10 +1736,52 @@ class FirewallPolicy(object):
             transaction.add_rules(backend, rules)
 
     def _ingress_zone(self, enable, policy, zone, transaction):
-        pass
+        # Skip if this policy has zone of HOST or ANY for any of its
+        # ingress or egress zones.
+        if any([_zone in ['HOST', 'ANY'] for _zone in self.get_settings(policy)['ingress_zones']]) or \
+            any([_zone in ['HOST', 'ANY'] for _zone in self.get_settings(policy)['egress_zones']]):
+            return
+
+        transaction.add_chain(policy, "filter", None)
+
+        for backend in self._fw.enabled_backends():
+            if not backend.policies_supported:
+                continue
+
+            ingress_if = []
+            egress_if = []
+            for ingress_zone in self.get_settings(policy)['ingress_zones']:
+                ingress_if += self._fw.zone.get_zone(ingress_zone).settings["interfaces"]
+            for egress_zone in self.get_settings(policy)['egress_zones']:
+                egress_if += self._fw.zone.get_zone(egress_zone).settings["interfaces"]
+
+            rules = backend.build_policy_source_interface_rules(enable, policy, "filter",
+                        ingress_if=ingress_if, egress_if=egress_if)
+            transaction.add_rules(backend, [rules])
 
     def _egress_zone(self, enable, policy, zone, transaction):
-        pass
+        # Skip if this policy has zone of HOST or ANY for any of its
+        # ingress or egress zones.
+        if any([_zone in ['HOST', 'ANY'] for _zone in self.get_settings(policy)['ingress_zones']]) or \
+            any([_zone in ['HOST', 'ANY'] for _zone in self.get_settings(policy)['egress_zones']]):
+            return
+
+        transaction.add_chain(policy, "filter", None)
+
+        for backend in self._fw.enabled_backends():
+            if not backend.policies_supported:
+                continue
+
+            ingress_if = []
+            egress_if = []
+            for ingress_zone in self.get_settings(policy)['ingress_zones']:
+                ingress_if += self._fw.zone.get_zone(ingress_zone).settings["interfaces"]
+            for egress_zone in self.get_settings(policy)['egress_zones']:
+                egress_if += self._fw.zone.get_zone(egress_zone).settings["interfaces"]
+
+            rules = backend.build_policy_source_interface_rules(enable, policy, "filter",
+                        ingress_if=ingress_if, egress_if=egress_if)
+            transaction.add_rules(backend, [rules])
 
     def _get_table_chains_for_zone_dispatch(self, policy):
         """Create a list of (table, chain) needed for zone dispatch"""

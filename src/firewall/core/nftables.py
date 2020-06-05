@@ -647,6 +647,13 @@ class nftables(object):
                                                         "table": TABLE_NAME,
                                                         "chain": "filter_%s" % "FORWARD",
                                                         "expr": [{"jump": {"target": "filter_%s_%s_%s" % ("FORWARD", direction, dispatch_suffix)}}]}}})
+        default_rules.append({"add": {"chain": {"family": "inet",
+                                                "table": TABLE_NAME,
+                                                "name": "filter_%s_%s" % ("FORWARD", "POLICIES")}}})
+        default_rules.append({"add": {"rule":  {"family": "inet",
+                                                "table": TABLE_NAME,
+                                                "chain": "filter_%s" % "FORWARD",
+                                                "expr": [{"jump": {"target": "filter_%s_%s" % ("FORWARD", "POLICIES")}}]}}})
         if log_denied != "off":
             default_rules.append({"add": {"rule":  {"family": "inet",
                                                     "table": TABLE_NAME,
@@ -800,6 +807,62 @@ class nftables(object):
                          {action: {"target": "%s_%s" % (table, _policy)}}]}
         rule.update(self._zone_source_fragment(zone, address))
         return [{add_del: {"rule": rule}}]
+
+    def build_policy_source_interface_rules(self, enable, policy, table,
+            ingress_if=None, egress_if=None, append=True, family="inet"):
+        _policy = self._fw.policy.policy_base_chain_name(policy, table, POLICY_CHAIN_PREFIX)
+
+        if ingress_if:
+            opt_in = "iifname"
+        else:
+            return []
+        if egress_if:
+            opt_out = "oifname"
+        else:
+            return []
+
+        interface = []
+        for iff in ingress_if + egress_if:
+            if iff[len(iff)-1] == "+":
+                interface.append(iff[:len(iff)-1] + "*")
+
+        action = "goto"
+
+        goto_chain = "%s_%s" % (table, _policy)
+        if "*" in interface:
+            expr_fragments = [{action: {"target": goto_chain}}]
+        else:
+            expr_fragments = [{"match": {"left": {"meta": {"key": opt_in}},
+                                         "op": "==",
+                                         "right": {"set": ingress_if}}},
+                              {"match": {"left": {"meta": {"key": opt_out}},
+                                         "op": "==",
+                                         "right": {"set": egress_if}}},
+                              {action: {"target": goto_chain}}]
+
+        if enable and not append:
+            verb = "insert"
+            rule = {"family": family,
+                    "table": TABLE_NAME,
+                    "chain": "filter_FORWARD_POLICIES",
+                    "expr": expr_fragments}
+            rule.update(self._zone_interface_fragment())
+        elif enable:
+            verb = "add"
+            rule = {"family": family,
+                    "table": TABLE_NAME,
+                    "chain": "filter_FORWARD_POLICIES",
+                    "expr": expr_fragments}
+        else:
+            verb = "delete"
+            rule = {"family": family,
+                    "table": TABLE_NAME,
+                    "chain": "filter_FORWARD_POLICIES",
+                    "expr": expr_fragments}
+            if not append:
+                rule.update(self._zone_interface_fragment())
+
+        return {verb: {"rule": rule}}
 
     def build_policy_chain_rules(self, policy, table, family="inet"):
         # nat tables needs to use ip/ip6 family
