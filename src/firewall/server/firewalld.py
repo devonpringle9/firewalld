@@ -936,9 +936,10 @@ class FirewallD(slip.dbus.service.Object):
     @dbus_handle_exceptions
     def setPolicySettings(self, policy, settings, sender=None):
         policy = dbus_to_python(policy, str)
+        settings_python = dbus_to_python(settings, dict)
         log.debug1("policy.setPolicySettings(%s)", policy)
         self.accessCheck(sender)
-        self.fw.policy.set_config_with_settings_dict(policy, settings, sender)
+        self.fw.policy.set_config_with_settings_dict(policy, settings_python, sender)
         self.PolicyUpdated(policy, settings)
 
     @dbus.service.signal(config.dbus.DBUS_INTERFACE_POLICY, signature='sa{sv}')
