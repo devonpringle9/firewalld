@@ -1057,6 +1057,7 @@ class FirewallConfig(object):
         # It is not possible to add a new one with a name of a buitin
         x.builtin = False
         x.default = True
+        x.derived_from_zone = False
 
         policy_writer(x)
         self.add_policy_object(x)

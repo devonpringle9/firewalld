@@ -830,6 +830,7 @@ def policy_reader(filename, path, no_check_name=False):
     policy.path = path
     policy.builtin = False if path.startswith(config.ETC_FIREWALLD) else True
     policy.default = policy.builtin
+    policy.derived_from_zone = False
     handler = policy_ContentHandler(policy)
     parser = sax.make_parser()
     parser.setContentHandler(handler)
