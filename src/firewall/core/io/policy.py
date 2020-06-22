@@ -697,6 +697,10 @@ class Policy(IO_Object):
                 if zone not in existing_zones:
                     raise FirewallError(errors.INVALID_ZONE,
                                         "'%s' not among existing zones" % (zone))
+                if not self.derived_from_zone:
+                    # A policy not derived from a zone doesn't need to have
+                    # ANY or HOST as ingress or egress, they just have to be existing zones.
+                    continue
                 if item == "ingress_zones":
                     _add_to_zone_list = self.ingress_zones
                 else:
@@ -830,6 +834,7 @@ def policy_reader(filename, path, no_check_name=False):
     policy.path = path
     policy.builtin = False if path.startswith(config.ETC_FIREWALLD) else True
     policy.default = policy.builtin
+    policy.derived_from_zone = False
     handler = policy_ContentHandler(policy)
     parser = sax.make_parser()
     parser.setContentHandler(handler)
