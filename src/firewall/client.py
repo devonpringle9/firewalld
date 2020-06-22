@@ -3227,6 +3227,8 @@ class FirewallClient(object):
         self.fw_zone = None
         self.fw_helper = None
         self.fw_direct = None
+        self.fw_policy = None
+        self.fw_policies = None
         self.fw_properties = None
         self._config = None
         self.connected = False
@@ -3282,6 +3284,9 @@ class FirewallClient(object):
                 dbus_interface=config.dbus.DBUS_INTERFACE_ZONE)
             self.fw_direct = dbus.Interface(
                 self.dbus_obj, dbus_interface=config.dbus.DBUS_INTERFACE_DIRECT)
+            self.fw_policy = dbus.Interface(
+                self.dbus_obj,
+                dbus_interface=config.dbus.DBUS_INTERFACE_POLICY)
             self.fw_policies = dbus.Interface(
                 self.dbus_obj,
                 dbus_interface=config.dbus.DBUS_INTERFACE_POLICIES)
