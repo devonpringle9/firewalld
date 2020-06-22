@@ -30,7 +30,7 @@ import slip.dbus
 import slip.dbus.service
 
 from firewall import config
-from firewall.core.base import DEFAULT_ZONE_TARGET
+from firewall.core.base import DEFAULT_ZONE_TARGET, DEFAULT_POLICY_TARGET
 from firewall.core.watcher import Watcher
 from firewall.core.logger import log
 from firewall.server.decorators import handle_exceptions, \
@@ -1341,6 +1341,8 @@ class FirewallDConfig(slip.dbus.service.Object):
         settings = dbus_to_python(settings)
         log.debug1("config.addPolicy('%s')", policy)
         self.accessCheck(sender)
+        if "target" in settings and settings["target"] == "default":
+            settings["target"] = DEFAULT_POLICY_TARGET
         obj = self.config.new_policy_object_dict(policy, settings)
         config_policy = self._addPolicy(obj)
         return config_policy
