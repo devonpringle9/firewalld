@@ -919,9 +919,9 @@ class FirewallClientPolicySettings(object):
                          "target": DEFAULT_POLICY_TARGET,
                          "version": "",
                          }
-        self.settings_dbus_type = ["s", "s", "s", "b",
+        self.settings_dbus_type = ["s", "s", "(ssss)", "s",
                                    "s", "s", "(ss)",
-                                   "s", "b", "(ssss)",
+                                   "s", "s", "s",
                                    "s", "s", "s",
                                    "s", "(ss)", "b",
                                    "b"]
