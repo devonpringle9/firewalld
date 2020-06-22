@@ -352,10 +352,11 @@ class FirewallDConfig(slip.dbus.service.Object):
         for policy in self.policy_objects:
             settings = policy.getSettings()
             # if this IcmpType is used in a policy remove it from that policy first
-            if obj.name in settings["icmp_blocks"]:
-                settings["icmp_blocks"].remove(obj.name)
-                policy.obj = self.config.set_policy_object_config_dict(policy.obj, settings)
-                policy.Updated(policy.obj.name)
+            if settings.get("icmp_blocks"):
+                if obj.name in settings["icmp_blocks"]:
+                    settings["icmp_blocks"].remove(obj.name)
+                    policy.obj = self.config.set_policy_object_config_dict(policy.obj, settings)
+                    policy.Updated(policy.obj.name)
 
         for icmptype in self.icmptypes:
             if icmptype.obj == obj:
@@ -398,10 +399,11 @@ class FirewallDConfig(slip.dbus.service.Object):
         for policy in self.policy_objects:
             settings = policy.getSettings()
             # if this Service is used in a policy remove it from that policy first
-            if obj.name in settings["services"]:
-                settings["services"].remove(obj.name)
-                policy.obj = self.config.set_policy_object_config_dict(policy.obj, settings)
-                policy.Updated(policy.obj.name)
+            if settings.get("services"):
+                if obj.name in settings["services"]:
+                    settings["services"].remove(obj.name)
+                    policy.obj = self.config.set_policy_object_config_dict(policy.obj, settings)
+                    policy.Updated(policy.obj.name)
 
         for service in self.services:
             if service.obj == obj:
