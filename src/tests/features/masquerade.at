@@ -29,6 +29,7 @@ FWD_CHECK([--permanent --policy=foobar --remove-masquerade], 0, [ignore])
 FWD_CHECK([--permanent --policy=foobar --remove-rich-rule='rule family=ipv4 source address=10.10.10.0/24 masquerade'], 0, [ignore])
 FWD_CHECK([--permanent --policy foobar --query-masquerade], 1, [ignore])
 FWD_CHECK([--permanent --policy=foobar --query-rich-rule='rule family=ipv4 source address=10.10.10.0/24 masquerade'], 1, [ignore])
+FWD_RELOAD
 
 dnl runtime --> permanent
 m4_ifdef([TESTING_FIREWALL_OFFLINE_CMD], [],
