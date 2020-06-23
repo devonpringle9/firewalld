@@ -943,6 +943,8 @@ class FirewallClientPolicySettings(object):
     def getSettingsDbusDict(self):
         settings = {}
         for key,sig in zip(self.settings, self.settings_dbus_type):
+            if key == 'UNUSED':
+                continue
             value = self.settings[key]
             if type(value) is list:
                 settings[key] = dbus.Array(value, signature=sig)
@@ -950,6 +952,25 @@ class FirewallClientPolicySettings(object):
                 settings[key] = dbus.Dictionary(value, signature=sig)
             else:
                 settings[key] = value
+        return settings
+
+    @handle_exceptions
+    def getRuntimeSettingsDict(self):
+        settings = self.getSettingsDict()
+        # These are not configurable at runtime:
+        del settings['version']
+        del settings['short']
+        del settings['description']
+        del settings['target']
+        return settings
+    @handle_exceptions
+    def getRuntimeSettingsDbusDict(self):
+        settings = self.getSettingsDbusDict()
+        # These are not configurable at runtime:
+        del settings['version']
+        del settings['short']
+        del settings['description']
+        del settings['target']
         return settings
 
     @handle_exceptions
@@ -3575,7 +3596,7 @@ class FirewallClient(object):
     @slip.dbus.polkit.enable_proxy
     @handle_exceptions
     def setPolicySettings(self, policy, settings):
-        self.fw_policy.setPolicySettings(policy, settings.getSettingsDbusDict())
+        self.fw_policy.setPolicySettings(policy, settings.getRuntimeSettingsDbusDict())
 
     @slip.dbus.polkit.enable_proxy
     @handle_exceptions
