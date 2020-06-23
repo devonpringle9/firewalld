@@ -478,6 +478,28 @@ class FirewallD(slip.dbus.service.Object):
                     (name, e))
                 error = True
 
+        # policy
+
+        config_names = self.config.getPolicyNames()
+        for name in self.fw.policy.get_policies_not_derived_from_zone():
+            conf = self.getPolicySettings(name)
+            try:
+                if name in config_names:
+                    conf_obj = self.config.getPolicyByName(name)
+                    if conf_obj.getSettings() != conf:
+                        log.debug1("Copying policy '%s' settings" % name)
+                        conf_obj.update(conf)
+                    else:
+                        log.debug1("Policy '%s' is identical, ignoring." % name)
+                else:
+                    log.debug1("Creating policy '%s'" % name)
+                    self.config.addPolicy(name, conf)
+            except Exception as e:
+                log.warning(
+                    "Runtime To Permanent failed on policy '%s': %s" % \
+                    (name, e))
+                error = True
+
         # helpers
 
         config_names = self.config.getHelperNames()
