@@ -125,7 +125,14 @@ class IO_Object(object):
             if key not in [x for (x,y) in self.IMPORT_EXPORT_STRUCTURE]:
                 raise FirewallError(errors.INVALID_OPTION, "option '{}' is not valid".format(key))
             self._check_config_structure(conf[key], type_formats[key])
-            self._check_config(conf[key], key)
+            # The future configuration is important to know when checking the config
+            # for the example of attempting to set an egress zone of 'internal' when
+            # the current egress zone is set to 'HOST'. The current egress zone doesn't
+            # matter if it is to be changed anyway.
+            if key in ['ingress_zones', 'egress_zones']:
+                self._check_config(conf[key], key, conf=conf)
+            else:
+                self._check_config(conf[key], key)
 
     def _check_config(self, dummy1, dummy2):
         # to be overloaded by sub classes

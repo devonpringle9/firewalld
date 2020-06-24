@@ -677,7 +677,7 @@ class Policy(IO_Object):
         else:
             super(Policy, self).__setattr__(name, value)
 
-    def _check_config(self, config, item):
+    def _check_config(self, config, item, conf=None):
         common_check_config(self, config, item)
 
         if item == "target":
@@ -697,10 +697,16 @@ class Policy(IO_Object):
                 if zone not in existing_zones:
                     raise FirewallError(errors.INVALID_ZONE,
                                         "'%s' not among existing zones" % (zone))
-                if item == "ingress_zones":
-                    _add_to_zone_list = self.ingress_zones
+                if not conf is None:
+                    if item == "ingress_zones":
+                        _add_to_zone_list = conf.get("ingress_zones")
+                    else:
+                        _add_to_zone_list = conf.get("egress_zones")
                 else:
-                    _add_to_zone_list = self.egress_zones
+                    if item == "ingress_zones":
+                        _add_to_zone_list = self.ingress_zones
+                    else:
+                        _add_to_zone_list = self.egress_zones
                 if ((zone not in ["ANY", "HOST"] and (set(["ANY", "HOST"]) & set(_add_to_zone_list))) or \
                    (zone in ["ANY", "HOST"] and (set(_add_to_zone_list) - set([zone])))):
                     raise FirewallError(errors.INVALID_ZONE,
