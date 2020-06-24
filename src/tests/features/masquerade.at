@@ -13,18 +13,18 @@ FWD_CHECK([--permanent --policy=foobar --query-rich-rule='rule family=ipv4 sourc
 FWD_RELOAD
 FWD_CHECK([--policy foobar --query-masquerade], 0, ignore)
 FWD_CHECK([--policy=foobar --query-rich-rule='rule family=ipv4 source address=10.10.10.0/24 masquerade'], 0, [ignore])
-NFT_LIST_RULES([ip], [nat_policy_foobar_allow], 0, [dnl
-    FIXME: verify rules added
-])
-NFT_LIST_RULES([ip6], [nat_policy_foobar_allow], 0, [dnl
-    FIXME: verify no rules added
-])
-IPTABLES_LIST_RULES([nat], [pol_foobar_allow], 0, [dnl
-    FIXME: verify rules added
-])
-IP6TABLES_LIST_RULES([nat], [pol_foobar_allow], 0, [dnl
-    FIXME: verify no rules added
-])
+dnl NFT_LIST_RULES([ip], [nat_policy_foobar_allow], 0, [dnl
+dnl     FIXME: verify rules added
+dnl ])
+dnl NFT_LIST_RULES([ip6], [nat_policy_foobar_allow], 0, [dnl
+dnl     FIXME: verify no rules added
+dnl ])
+dnl IPTABLES_LIST_RULES([nat], [pol_foobar_allow], 0, [dnl
+dnl     FIXME: verify rules added
+dnl ])
+dnl IP6TABLES_LIST_RULES([nat], [pol_foobar_allow], 0, [dnl
+dnl     FIXME: verify no rules added
+dnl ])
 FWD_CHECK([--permanent --policy=foobar --remove-masquerade], 0, [ignore])
 FWD_CHECK([--permanent --policy=foobar --remove-rich-rule='rule family=ipv4 source address=10.10.10.0/24 masquerade'], 0, [ignore])
 FWD_CHECK([--permanent --policy foobar --query-masquerade], 1, [ignore])
@@ -39,18 +39,18 @@ FWD_CHECK([--policy=foobar --query-rich-rule='rule family=ipv4 source address=10
 FWD_CHECK([--runtime-to-permanent], 0, [ignore])
 FWD_CHECK([--permanent --policy foobar --query-masquerade], 0, [ignore])
 FWD_CHECK([--permanent --policy=foobar --query-rich-rule='rule family=ipv4 source address=10.10.10.0/24 masquerade'], 0, [ignore])
-NFT_LIST_RULES([ip], [nat_policy_foobar_allow], 0, [dnl
-    FIXME: verify rules added
-])
-NFT_LIST_RULES([ip6], [nat_policy_foobar_allow], 0, [dnl
-    FIXME: verify no rules added
-])
-IPTABLES_LIST_RULES([nat], [pol_foobar_allow], 0, [dnl
-    FIXME: verify rules added
-])
-IP6TABLES_LIST_RULES([nat], [pol_foobar_allow], 0, [dnl
-    FIXME: verify no rules added
-])
+dnl NFT_LIST_RULES([ip], [nat_policy_foobar_allow], 0, [dnl
+dnl     FIXME: verify rules added
+dnl ])
+dnl NFT_LIST_RULES([ip6], [nat_policy_foobar_allow], 0, [dnl
+dnl     FIXME: verify no rules added
+dnl ])
+dnl IPTABLES_LIST_RULES([nat], [pol_foobar_allow], 0, [dnl
+dnl     FIXME: verify rules added
+dnl ])
+dnl IP6TABLES_LIST_RULES([nat], [pol_foobar_allow], 0, [dnl
+dnl     FIXME: verify no rules added
+dnl ])
 FWD_CHECK([--permanent --policy=foobar --remove-masquerade], 0, [ignore])
 FWD_CHECK([--permanent --policy=foobar --remove-rich-rule='rule family=ipv4 source address=10.10.10.0/24 masquerade'], 0, [ignore])
 FWD_CHECK([--permanent --policy foobar --query-masquerade], 1, [ignore])

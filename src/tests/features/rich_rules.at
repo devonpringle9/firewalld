@@ -11,31 +11,31 @@ FWD_RELOAD
 
 dnl basic layout
 dnl
-NFT_LIST_RULES([inet], [filter_policy_foobar], 0, [dnl
-    table inet firewalld {
-        chain filter_policy_foobar {
-            jump filter_policy_foobar_pre
-            jump filter_policy_foobar_log
-            jump filter_policy_foobar_deny
-            jump filter_policy_foobar_allow
-            jump filter_policy_foobar_post
-        }
-    }
-])
-IPTABLES_LIST_RULES([filter], [pol_foobar], 0, [dnl
-    pol_foobar_pre all -- 0.0.0.0/0 0.0.0.0/0
-    pol_foobar_log all -- 0.0.0.0/0 0.0.0.0/0
-    pol_foobar_deny all -- 0.0.0.0/0 0.0.0.0/0
-    pol_foobar_allow all -- 0.0.0.0/0 0.0.0.0/0
-    pol_foobar_post all -- 0.0.0.0/0 0.0.0.0/0
-])
-IP6TABLES_LIST_RULES([filter], [pol_foobar], 0, [dnl
-    pol_foobar_pre all ::/0 ::/0
-    pol_foobar_log all ::/0 ::/0
-    pol_foobar_deny all ::/0 ::/0
-    pol_foobar_allow all ::/0 ::/0
-    pol_foobar_post all ::/0 ::/0
-])
+dnl NFT_LIST_RULES([inet], [filter_policy_foobar], 0, [dnl
+dnl     table inet firewalld {
+dnl         chain filter_policy_foobar {
+dnl             jump filter_policy_foobar_pre
+dnl             jump filter_policy_foobar_log
+dnl             jump filter_policy_foobar_deny
+dnl             jump filter_policy_foobar_allow
+dnl             jump filter_policy_foobar_post
+dnl         }
+dnl     }
+dnl ])
+dnl IPTABLES_LIST_RULES([filter], [pol_foobar], 0, [dnl
+dnl     pol_foobar_pre all -- 0.0.0.0/0 0.0.0.0/0
+dnl     pol_foobar_log all -- 0.0.0.0/0 0.0.0.0/0
+dnl     pol_foobar_deny all -- 0.0.0.0/0 0.0.0.0/0
+dnl     pol_foobar_allow all -- 0.0.0.0/0 0.0.0.0/0
+dnl     pol_foobar_post all -- 0.0.0.0/0 0.0.0.0/0
+dnl ])
+dnl IP6TABLES_LIST_RULES([filter], [pol_foobar], 0, [dnl
+dnl     pol_foobar_pre all ::/0 ::/0
+dnl     pol_foobar_log all ::/0 ::/0
+dnl     pol_foobar_deny all ::/0 ::/0
+dnl     pol_foobar_allow all ::/0 ::/0
+dnl     pol_foobar_post all ::/0 ::/0
+dnl ])
 
 dnl priority
 dnl
@@ -47,36 +47,36 @@ FWD_CHECK([--permanent --add-rich-rule='rule family=ipv4 priority=0  source addr
 FWD_CHECK([--permanent --add-rich-rule='rule family=ipv4 priority=-1 source address=10.10.10.14 accept'], 0, ignore)
 FWD_CHECK([--permanent --add-rich-rule='rule family=ipv4 priority=1  source address=10.10.10.15 accept'], 0, ignore)
 FWD_RELOAD
-NFT_LIST_RULES([inet], [filter_policy_foobar_pre], 0, [dnl
-    FIXME
-])
-IPTABLES_LIST_RULES([filter], [pol_foobar_pre], 0, [dnl
-    FIXME
-])
-NFT_LIST_RULES([inet], [filter_policy_foobar_log], 0, [dnl
-    FIXME
-])
-IPTABLES_LIST_RULES([filter], [pol_foobar_log], 0, [dnl
-    FIXME
-])
-NFT_LIST_RULES([inet], [filter_policy_foobar_deny], 0, [dnl
-    FIXME
-])
-IPTABLES_LIST_RULES([filter], [pol_foobar_deny], 0, [dnl
-    FIXME
-])
-NFT_LIST_RULES([inet], [filter_policy_foobar_allow], 0, [dnl
-    FIXME
-])
-IPTABLES_LIST_RULES([filter], [pol_foobar_allow], 0, [dnl
-    FIXME
-])
-NFT_LIST_RULES([inet], [filter_policy_foobar_post], 0, [dnl
-    FIXME
-])
-IPTABLES_LIST_RULES([filter], [pol_foobar_post], 0, [dnl
-    FIXME
-])
+dnl NFT_LIST_RULES([inet], [filter_policy_foobar_pre], 0, [dnl
+dnl     FIXME
+dnl ])
+dnl IPTABLES_LIST_RULES([filter], [pol_foobar_pre], 0, [dnl
+dnl     FIXME
+dnl ])
+dnl NFT_LIST_RULES([inet], [filter_policy_foobar_log], 0, [dnl
+dnl     FIXME
+dnl ])
+dnl IPTABLES_LIST_RULES([filter], [pol_foobar_log], 0, [dnl
+dnl     FIXME
+dnl ])
+dnl NFT_LIST_RULES([inet], [filter_policy_foobar_deny], 0, [dnl
+dnl     FIXME
+dnl ])
+dnl IPTABLES_LIST_RULES([filter], [pol_foobar_deny], 0, [dnl
+dnl     FIXME
+dnl ])
+dnl NFT_LIST_RULES([inet], [filter_policy_foobar_allow], 0, [dnl
+dnl     FIXME
+dnl ])
+dnl IPTABLES_LIST_RULES([filter], [pol_foobar_allow], 0, [dnl
+dnl     FIXME
+dnl ])
+dnl NFT_LIST_RULES([inet], [filter_policy_foobar_post], 0, [dnl
+dnl     FIXME
+dnl ])
+dnl IPTABLES_LIST_RULES([filter], [pol_foobar_post], 0, [dnl
+dnl     FIXME
+dnl ])
 
 dnl source/destination
 dnl
@@ -85,44 +85,44 @@ FWD_CHECK([--permanent --add-rich-rule='rule family=ipv4 priority=-2 destination
 FWD_CHECK([--permanent --add-rich-rule='rule family=ipv4 priority=-3 source address=10.20.20.22 destination address=10.20.20.23 drop'], 0, ignore)
 FWD_CHECK([--permanent --add-rich-rule='rule family=ipv6 priority=-4 source address=1234::4321 destination address=1234::4444 drop'], 0, ignore)
 FWD_RELOAD
-NFT_LIST_RULES([inet], [filter_policy_foobar_pre], 0, [dnl
-    FIXME
-])
-IPTABLES_LIST_RULES([filter], [pol_foobar_pre], 0, [dnl
-    FIXME
-])
-IP6TABLES_LIST_RULES([filter], [pol_foobar_pre], 0, [dnl
-    FIXME
-])
+dnl NFT_LIST_RULES([inet], [filter_policy_foobar_pre], 0, [dnl
+dnl     FIXME
+dnl ])
+dnl IPTABLES_LIST_RULES([filter], [pol_foobar_pre], 0, [dnl
+dnl     FIXME
+dnl ])
+dnl IP6TABLES_LIST_RULES([filter], [pol_foobar_pre], 0, [dnl
+dnl     FIXME
+dnl ])
 
 dnl icmp-type
 dnl
 FWD_CHECK([--permanent --add-rich-rule='rule priority=-1 icmp-type name="neighbour-advertisement" accept'], 0, ignore)
 FWD_CHECK([--permanent --add-rich-rule='rule priority=-2 icmp-type name="echo-request" accept'], 0, ignore)
 FWD_RELOAD
-NFT_LIST_RULES([inet], [filter_policy_foobar_pre], 0, [dnl
-    FIXME
-])
-IPTABLES_LIST_RULES([filter], [pol_foobar_pre], 0, [dnl
-    FIXME
-])
-IP6TABLES_LIST_RULES([filter], [pol_foobar_pre], 0, [dnl
-    FIXME
-])
+dnl NFT_LIST_RULES([inet], [filter_policy_foobar_pre], 0, [dnl
+dnl     FIXME
+dnl ])
+dnl IPTABLES_LIST_RULES([filter], [pol_foobar_pre], 0, [dnl
+dnl     FIXME
+dnl ])
+dnl IP6TABLES_LIST_RULES([filter], [pol_foobar_pre], 0, [dnl
+dnl     FIXME
+dnl ])
 
 dnl mark action
 dnl
 FWD_CHECK([--permanent --add-rich-rule='rule priority=-1 mark set=1234'], 0, ignore)
 FWD_RELOAD
-NFT_LIST_RULES([inet], [mangle_policy_foobar_pre], 0, [dnl
-    FIXME
-])
-IPTABLES_LIST_RULES([mangle], [pol_foobar_pre], 0, [dnl
-    FIXME
-])
-IP6TABLES_LIST_RULES([mangle], [pol_foobar_pre], 0, [dnl
-    FIXME
-])
+dnl NFT_LIST_RULES([inet], [mangle_policy_foobar_pre], 0, [dnl
+dnl     FIXME
+dnl ])
+dnl IPTABLES_LIST_RULES([mangle], [pol_foobar_pre], 0, [dnl
+dnl     FIXME
+dnl ])
+dnl IP6TABLES_LIST_RULES([mangle], [pol_foobar_pre], 0, [dnl
+dnl     FIXME
+dnl ])
 
 dnl FIXME: check mark action only valid if
 dnl         - egress zone is HOST or ANY
@@ -132,14 +132,14 @@ dnl
 FWD_CHECK([--permanent --add-rich-rule='rule priority=32000 log prefix="LOG: " level="warning"'], 0, ignore)
 FWD_CHECK([--permanent --add-rich-rule='rule priority=32001 audit accept'], 0, ignore)
 FWD_RELOAD
-NFT_LIST_RULES([inet], [filter_policy_foobar_post], 0, [dnl
-    FIXME
-])
-IPTABLES_LIST_RULES([filter], [pol_foobar_post], 0, [dnl
-    FIXME
-])
-IP6TABLES_LIST_RULES([filter], [pol_foobar_post], 0, [dnl
-    FIXME
-])
+dnl NFT_LIST_RULES([inet], [filter_policy_foobar_post], 0, [dnl
+dnl     FIXME
+dnl ])
+dnl IPTABLES_LIST_RULES([filter], [pol_foobar_post], 0, [dnl
+dnl     FIXME
+dnl ])
+dnl IP6TABLES_LIST_RULES([filter], [pol_foobar_post], 0, [dnl
+dnl     FIXME
+dnl ])
 
 FWD_END_TEST
