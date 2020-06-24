@@ -16,6 +16,7 @@ from firewall import errors
 from firewall.errors import FirewallError
 from firewall.fw_types import LastUpdatedOrderedDict
 from firewall.core.base import SOURCE_IPSET_TYPES
+from firewall.core.io.policy import Policy
 
 class FirewallPolicy(object):
     def __init__(self, fw):
@@ -220,6 +221,15 @@ class FirewallPolicy(object):
 
         old_settings = self.get_config_with_settings_dict(policy)
         (add_settings, remove_settings) = self._fw.get_added_and_removed_settings(old_settings, settings)
+
+        # There are config checks which are only used for permanent configuration.
+        # These checks must also be used for runtime settings.
+        p = Policy()
+        p.fw_config = self._fw.config
+        p.derived_from_zone = False
+        p.ingress_zones = settings.get('ingress_zones')
+        p.egress_zones = settings.get('egress_zones')
+        p.check_config_dict(settings)
 
         for key in remove_settings:
             if isinstance(remove_settings[key], list):
