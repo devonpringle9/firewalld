@@ -987,6 +987,13 @@ class nftables(object):
             log_options["prefix"] = "%s" % rich_rule.log.prefix
         if rich_rule.log.level:
             log_options["level"] = "%s" % rich_rule.log.level
+            # The log levels for nftables don't align exactly with iptables
+            log_level_conversions = {
+                "error": "err",
+                "warning": "warn",
+            }
+            if rich_rule.log.level in log_level_conversions.keys():
+                log_options["level"] = log_level_conversions[rich_rule.log.level]
 
         rule = {"family": "inet",
                 "table": TABLE_NAME,
