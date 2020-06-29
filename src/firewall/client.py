@@ -3587,11 +3587,6 @@ class FirewallClient(object):
     def getActivePolicies(self):
         return dbus_to_python(self.fw_policy.getActivePolicies())
 
-    @slip.dbus.polkit.enable_proxy
-    @handle_exceptions
-    def isPolicyImmutable(self, policy):
-        return dbus_to_python(self.fw_policy.isImmutable(policy))
-
     # interfaces
 
     @slip.dbus.polkit.enable_proxy
