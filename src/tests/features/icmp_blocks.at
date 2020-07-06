@@ -77,4 +77,4 @@ FWD_CHECK([--policy=foobar --add-icmp-block dummy], 107, [ignore], [ignore])
 FWD_CHECK([--permanent --policy=foobar --add-rich-rule='rule family=ipv6 source address=1234:5678::/64 icmp-block name="dummy"'], 107, [ignore], [ignore])
 FWD_CHECK([--policy=foobar --add-rich-rule='rule family=ipv6 source address=1234:5678::/64 icmp-block name="dummy"'], 107, [ignore], [ignore])
 
-FWD_END_TEST
+FWD_END_TEST([ -e '/ERROR: INVALID_ICMPTYPE/d'])

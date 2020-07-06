@@ -94,7 +94,7 @@ dnl verify name length (18)
 FWD_CHECK([--permanent --new-policy 123456789012345678], 0, [ignore])
 FWD_CHECK([--permanent --new-policy 1234567890123456789], 116, [ignore], [ignore])
 
-FWD_END_TEST
+FWD_END_TEST([-e '/ERROR: INVALID_NAME/d'])
 
 FWD_START_TEST([policy - priority])
 AT_KEYWORDS(policy)
@@ -189,7 +189,7 @@ FWD_CHECK([--permanent --policy worldToHost --set-priority -32768], 0, [ignore])
 FWD_CHECK([--permanent --policy worldToHost --set-priority  32768], 139, [ignore], [ignore])
 FWD_CHECK([--permanent --policy worldToHost --set-priority  32767], 0, [ignore])
 
-FWD_END_TEST
+FWD_END_TEST([-e '/ERROR: INVALID_PRIORITY/d'])
 
 FWD_START_TEST([policy - zones])
 AT_KEYWORDS(policy)
@@ -306,7 +306,7 @@ dnl IP6TABLES_LIST_RULES([filter], [FWD_policy_pre], 0, [dnl
 dnl     FIXME: verify rules not added
 dnl ])
 
-FWD_END_TEST
+FWD_END_TEST([-e '/ERROR: INVALID_ZONE/d'])
 
 FWD_START_TEST([policy - dispatch])
 AT_KEYWORDS(policy)
@@ -872,7 +872,7 @@ FWD_CHECK([--permanent --policy=foobar --set-target=REJECT], 0, [ignore])
 FWD_CHECK([--permanent --policy=foobar --set-target=DENY], 110, [ignore], [ignore])
 FWD_CHECK([--permanent --policy=foobar --set-target=default], 110, [ignore], [ignore])
 
-FWD_END_TEST
+FWD_END_TEST([-e '/ERROR: INVALID_TARGET: /d'])
 
 FWD_START_TEST([policy - from file])
 AT_KEYWORDS(policy)
