@@ -776,6 +776,7 @@ class policy_ContentHandler(IO_Object_ContentHandler):
             target = attrs["target"]
             if target not in POLICY_TARGETS:
                 raise FirewallError(errors.INVALID_TARGET, target)
+            self.item.target = target
 
         elif name == "ingress-zone":
             if attrs["name"] not in self.item.ingress_zones:
